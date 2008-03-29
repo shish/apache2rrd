@@ -11,6 +11,8 @@ class ApacheToRRD:
     def __init__(self, rrd):
         self.clear()
         self.last_flush = None
+        self.last_date = None
+        self.last_date_text = None
         self.rrd = rrd
 
     def init_rrd(self):
@@ -70,8 +72,9 @@ class ApacheToRRD:
         for line in fopen(filename):
             try:
                 n = n + 1
-                if n % 100000 == 0:
-                    print "\rLine "+str(n),
+                if n % 10000 == 0:
+                    print "Line "+str(n)+"\r",
+                    sys.stdout.flush()
                 (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
                 current_timestamp = self.parse_date(date)
 
@@ -91,13 +94,19 @@ class ApacheToRRD:
 
                 if size != "-":
                     self.bandwidth = self.bandwidth + int(size)
+            except KeyboardInterrupt, ke:
+                raise ke
             except Exception, e:
                 print "Error with line:\n"+line+"\nError is:\n"+str(e)
 
         self.flush()
 
     def parse_date(self, date):
-        return int(time.mktime(time.strptime(date, "[%d/%b/%Y:%H:%M:%S")))
+        (date, hour, minute, second) = date.split(":")
+        if date != self.last_date_text:
+            self.last_date = int(time.mktime(time.strptime(date, "[%d/%b/%Y")))
+            self.last_date_text = date
+        return self.last_date + int(hour)*60*60 + int(minute)*60 + int(second)
 
     def length_to_t(self, length):
         if length == "day":
