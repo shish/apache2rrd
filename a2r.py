@@ -68,28 +68,31 @@ class ApacheToRRD:
         # do the bulk of the parsing
         n = 0
         for line in fopen(filename):
-            n = n + 1
-            if n % 100000 == 0:
-                print "Line "+str(n),
-            (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
-            current_timestamp = self.parse_date(date)
+            try:
+                n = n + 1
+                if n % 100000 == 0:
+                    print "Line "+str(n),
+                (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
+                current_timestamp = self.parse_date(date)
 
-            while current_timestamp >= self.last_flush + 300:
-                self.flush()
+                while current_timestamp >= self.last_flush + 300:
+                    self.flush()
 
-            if agent.find("Gecko") >= 0:
-                self.gecko = self.gecko + 1
-            elif agent.find("Opera") >= 0:
-                self.opera = self.opera + 1
-            elif agent.find("Bot") >= 0:
-                self.bots = self.bots + 1
-            elif agent.find("MSIE") >= 0:
-                self.msie = self.msie + 1
-            else:
-                self.other = self.other + 1
+                if agent.find("Gecko") >= 0:
+                    self.gecko = self.gecko + 1
+                elif agent.find("Opera") >= 0:
+                    self.opera = self.opera + 1
+                elif agent.find("Bot") >= 0:
+                    self.bots = self.bots + 1
+                elif agent.find("MSIE") >= 0:
+                    self.msie = self.msie + 1
+                else:
+                    self.other = self.other + 1
 
-            if size != "-":
-                self.bandwidth = self.bandwidth + int(size)
+                if size != "-":
+                    self.bandwidth = self.bandwidth + int(size)
+            except Exception, e:
+                print "Error with line:\n"+line+"\nError is:\n"+str(e)
 
         self.flush()
 
