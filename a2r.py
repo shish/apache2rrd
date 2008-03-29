@@ -71,7 +71,7 @@ class ApacheToRRD:
             try:
                 n = n + 1
                 if n % 100000 == 0:
-                    print "Line "+str(n),
+                    print "\rLine "+str(n),
                 (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
                 current_timestamp = self.parse_date(date)
 
