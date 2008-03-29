@@ -9,15 +9,14 @@ import sys
 class ApacheToRRD:
     def __init__(self, rrd):
         self.clear()
-        self.last_flush = 0
-        self.date_start = None
+        self.last_flush = None
         self.rrd = rrd
 
     def init_rrd(self):
         if not os.path.exists(self.rrd):
             rrdtool.create(self.rrd,
                     '--step', '300',
-                    '--start', str(self.date_start-1),
+                    '--start', str(self.last_flush-1),
                     'DS:gecko:GAUGE:600:0:U',
                     'DS:opera:GAUGE:600:0:U',
                     'DS:msie:GAUGE:600:0:U',
@@ -30,13 +29,12 @@ class ApacheToRRD:
                     )
 
     def flush(self):
-        seconds = self.date_start + self.last_flush * 60
         #print "Update at "+str(seconds)
         rrdtool.update(self.rrd,
                 '-t', 'gecko:opera:msie:bots:other',
-                '%d:%d:%d:%d:%d:%d' % (seconds, self.gecko, self.opera, self.msie, self.bots, self.other))
+                '%d:%d:%d:%d:%d:%d' % (self.last_flush, self.gecko, self.opera, self.msie, self.bots, self.other))
         self.clear()
-        self.last_flush = self.last_flush + 5
+        self.last_flush = self.last_flush + 300
 
     def clear(self):
         self.gecko = 0
@@ -46,14 +44,13 @@ class ApacheToRRD:
         self.other = 0
 
     def parse_log(self, filename):
-        self.last_flush = 0
         print "Reading "+filename+"..."
         # check the file looks ok
-        line = open(filename).readline()
-        (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
-        (day, hour, minute, second) = date.split(":")
-        self.date_start = self.parse_date(day)
-        self.init_rrd()
+        if not self.last_flush:
+            line = open(filename).readline()
+            (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
+            self.last_flush = self.parse_date(date)
+            self.init_rrd()
 
         # do the bulk of the parsing
         n = 0
@@ -62,10 +59,9 @@ class ApacheToRRD:
             if n % 10000 == 0:
                 print "Line "+str(n)
             (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
-            (day, hour, minute, second) = date.split(":")
-            day_minute = int(hour) * 60 + int(minute)
+            current_timestamp = self.parse_date(date)
 
-            while day_minute >= self.last_flush + 5:
+            while current_timestamp >= self.last_flush + 300:
                 self.flush()
 
             if agent.find("Gecko") >= 0:
@@ -82,7 +78,7 @@ class ApacheToRRD:
         self.flush()
 
     def parse_date(self, date):
-        return int(time.mktime(time.strptime(date, "[%d/%b/%Y")))
+        return int(time.mktime(time.strptime(date, "[%d/%b/%Y:%H:%M:%S")))
 
     def output_browsers(self, filename, length="month"):
         if length == "day":
