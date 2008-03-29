@@ -5,6 +5,7 @@ import os
 import time
 import os.path
 import sys
+import gzip
 
 class ApacheToRRD:
     def __init__(self, rrd):
@@ -22,6 +23,7 @@ class ApacheToRRD:
                     'DS:msie:GAUGE:600:0:U',
                     'DS:bots:GAUGE:600:0:U',
                     'DS:other:GAUGE:600:0:U',
+                    'DS:bandwidth:GAUGE:600:0:U',
                     'RRA:AVERAGE:0.5:1:300',
                     'RRA:AVERAGE:0.5:6:384',
                     'RRA:AVERAGE:0.5:24:384',
@@ -31,8 +33,12 @@ class ApacheToRRD:
     def flush(self):
         #print "Update at "+str(seconds)
         rrdtool.update(self.rrd,
-                '-t', 'gecko:opera:msie:bots:other',
-                '%d:%d:%d:%d:%d:%d' % (self.last_flush, self.gecko, self.opera, self.msie, self.bots, self.other))
+                '-t', 'gecko:opera:msie:bots:other:bandwidth',
+                '%d:%d:%d:%d:%d:%d:%d' % (
+                        self.last_flush,
+                        self.gecko, self.opera, self.msie, self.bots, self.other,
+                        self.bandwidth)
+        )
         self.clear()
         self.last_flush = self.last_flush + 300
 
@@ -42,22 +48,29 @@ class ApacheToRRD:
         self.msie = 0
         self.bots = 0
         self.other = 0
+        self.bandwidth = 0
 
     def parse_log(self, filename):
         print "Reading "+filename+"..."
+
+        if filename[-3:] == ".gz":
+            fopen = gzip.open
+        else:
+            fopen = open
+
         # check the file looks ok
         if not self.last_flush:
-            line = open(filename).readline()
+            line = fopen(filename).readline()
             (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
             self.last_flush = self.parse_date(date)
             self.init_rrd()
 
         # do the bulk of the parsing
         n = 0
-        for line in file(filename):
+        for line in fopen(filename):
             n = n + 1
-            if n % 10000 == 0:
-                print "Line "+str(n)
+            if n % 100000 == 0:
+                print "Line "+str(n),
             (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
             current_timestamp = self.parse_date(date)
 
@@ -75,12 +88,15 @@ class ApacheToRRD:
             else:
                 self.other = self.other + 1
 
+            if size != "-":
+                self.bandwidth = self.bandwidth + int(size)
+
         self.flush()
 
     def parse_date(self, date):
         return int(time.mktime(time.strptime(date, "[%d/%b/%Y:%H:%M:%S")))
 
-    def output_browsers(self, filename, length="month"):
+    def length_to_t(self, length):
         if length == "day":
             t = "-1d"
         if length == "week":
@@ -89,9 +105,11 @@ class ApacheToRRD:
             t = "-1m"
         if length == "year":
             t = "-1y"
+        return t
 
-#       "--vertical 'Hits' --unit h",
-#       "--rigid --upper-limit 30",
+    def output_browsers(self, filename, length="month"):
+        t = self.length_to_t(length)
+
         rrdtool.graph(filename,
                 '--start', t,
                 '--width', "500", '--height', "150",
@@ -125,6 +143,28 @@ class ApacheToRRD:
         "LINE1:other#888888:Other"
         )
 
+    def output_bandwidth(self, filename, length="month"):
+        t = self.length_to_t(length)
+
+        rrdtool.graph(filename,
+                '--start', t,
+                '--width', "500", '--height', "150",
+                '--imgformat', 'PNG',
+                '--no-minor',
+                '--units-length', "7",
+        "--color", "ARROW#FFFFFF",
+        "--color", "BACK#000000",
+        "--color", "SHADEA#666666",
+        "--color", "SHADEB#666666",
+        "--color", "CANVAS#222222",
+        "--color", "MGRID#888888",
+        "--color", "GRID#444444",
+        "--color", "FONT#FFFFFF",
+        "DEF:sbandwidth="+self.rrd+":bandwidth:AVERAGE", # total for 5 mins
+        "CDEF:bandwidth=sbandwidth,300,/", # values per second
+        "AREA:bandwidth#666666:Bandwidth"
+        )
+
 def getMAL(series, units):
     return \
         "GPRINT:"+series+":AVERAGE:'%7.2lf"+units+"' "+\
@@ -140,4 +180,5 @@ if __name__ == "__main__":
     a2r.output_browsers("graph-week.png", "week")
     a2r.output_browsers("graph-month.png", "month")
     a2r.output_browsers("graph-year.png", "year")
+    a2r.output_bandwidth("graph-bw-week.png", "week")
 
