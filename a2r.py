@@ -4,8 +4,7 @@ import rrdtool
 import os
 import time
 import os.path
-
-#87.4.77.240 travmap.shishnet.org - [23/Mar/2008:00:00:00 +0000] "GET /map.php?lang=en&server=s3.travian.it&alliance=id%3A5099&caption=CRES&groupby=player&casen=on&azoom=on&format=png HTTP/1.1" 200 7205 "http://travian.ws/analyser.pl?s=it33&aid=5099" "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.0.04506)"
+import sys
 
 class ApacheToRRD:
     def __init__(self, rrd):
@@ -17,22 +16,22 @@ class ApacheToRRD:
     def init_rrd(self):
         if not os.path.exists(self.rrd):
             rrdtool.create(self.rrd,
-                            '--step', '300',
-                            '--start', str(self.date_start-1),
-                            'DS:gecko:GAUGE:600:0:U',
-                            'DS:opera:GAUGE:600:0:U',
-                            'DS:msie:GAUGE:600:0:U',
-                            'DS:bots:GAUGE:600:0:U',
-                            'DS:other:GAUGE:600:0:U',
-                            'RRA:AVERAGE:0.5:1:300',
-                            'RRA:AVERAGE:0.5:6:384',
-                            'RRA:AVERAGE:0.5:24:384',
-                            'RRA:AVERAGE:0.5:288:2400'
-                            )
+                    '--step', '300',
+                    '--start', str(self.date_start-1),
+                    'DS:gecko:GAUGE:600:0:U',
+                    'DS:opera:GAUGE:600:0:U',
+                    'DS:msie:GAUGE:600:0:U',
+                    'DS:bots:GAUGE:600:0:U',
+                    'DS:other:GAUGE:600:0:U',
+                    'RRA:AVERAGE:0.5:1:300',
+                    'RRA:AVERAGE:0.5:6:384',
+                    'RRA:AVERAGE:0.5:24:384',
+                    'RRA:AVERAGE:0.5:288:2400'
+                    )
 
     def flush(self):
         seconds = self.date_start + self.last_flush * 60
-        print '%d:%d:%d:%d:%d:%d' % (seconds, self.gecko, self.opera, self.msie, self.bots, self.other)
+        print "Update at "+str(seconds)
         rrdtool.update(self.rrd,
                 '-t', 'gecko:opera:msie:bots:other',
                 '%d:%d:%d:%d:%d:%d' % (seconds, self.gecko, self.opera, self.msie, self.bots, self.other))
@@ -47,6 +46,7 @@ class ApacheToRRD:
         self.other = 0
 
     def parse_log(self, filename):
+        print "Reading "+filename+"..."
         # check the file looks ok
         line = open(filename).readline()
         (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
@@ -55,7 +55,11 @@ class ApacheToRRD:
         self.init_rrd()
 
         # do the bulk of the parsing
+        n = 0
         for line in file(filename):
+            n = n + 1
+            if n % 5000 == 0:
+                print "Line "+str(n)
             (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
             (day, hour, minute, second) = date.split(":")
             day_minute = int(hour) * 60 + int(minute)
@@ -132,7 +136,9 @@ def getMAL(series, units):
         "GPRINT:"+series+":MAX:'%7.2lf"+units+"' "+\
         "GPRINT:"+series+":LAST:'%7.2lf"+units+"\\n' "
 
-a2r = ApacheToRRD("browsers.rrd")
-#a2r.parse_log("access.log")
-a2r.output_browsers("graph.png", "week")
-#                system("rrdtool update "+self.rrd+" -t gecko:opera:msie:bots:other N:$gecko:$opera:$msie:$bots:$other");
+if __name__ == "__main__":
+    a2r = ApacheToRRD("browsers.rrd")
+    for arg in sys.argv[1:]:
+        a2r.parse_log(arg)
+    a2r.output_browsers("graph.png", "week")
+
