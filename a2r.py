@@ -31,7 +31,7 @@ class ApacheToRRD:
 
     def flush(self):
         seconds = self.date_start + self.last_flush * 60
-        print "Update at "+str(seconds)
+        #print "Update at "+str(seconds)
         rrdtool.update(self.rrd,
                 '-t', 'gecko:opera:msie:bots:other',
                 '%d:%d:%d:%d:%d:%d' % (seconds, self.gecko, self.opera, self.msie, self.bots, self.other))
@@ -46,6 +46,7 @@ class ApacheToRRD:
         self.other = 0
 
     def parse_log(self, filename):
+        self.last_flush = 0
         print "Reading "+filename+"..."
         # check the file looks ok
         line = open(filename).readline()
@@ -58,7 +59,7 @@ class ApacheToRRD:
         n = 0
         for line in file(filename):
             n = n + 1
-            if n % 5000 == 0:
+            if n % 10000 == 0:
                 print "Line "+str(n)
             (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
             (day, hour, minute, second) = date.split(":")
@@ -114,19 +115,18 @@ class ApacheToRRD:
         "DEF:smsie="+self.rrd+":msie:AVERAGE",
         "DEF:sbots="+self.rrd+":bots:AVERAGE",
         "DEF:sother="+self.rrd+":other:AVERAGE",
-        "CDEF:gecko=sgecko,60,*", # values per minute
-        "CDEF:opera=sopera,60,*",
-        "CDEF:msie=smsie,60,*",
-        "CDEF:bots=sbots,60,*",
-        "CDEF:other=sother,60,*",
+        "CDEF:gecko=sgecko,5,/", # values per minute
+        "CDEF:opera=sopera,5,/",
+        "CDEF:msie=smsie,5,/",
+        "CDEF:bots=sbots,5,/",
+        "CDEF:other=sother,5,/",
         "CDEF:total=gecko,opera,+,msie,+",
-        "COMMENT:%12s%-14s%-14s%-14s%-14s" % (" ", "Average", "Min", "Max", "Current"),
-        "AREA:total#666666:'Total'",
-        "LINE1:gecko#FFAA00:'Gecko'",
-        "LINE1:opera#00AA00:'Opera'",
-        "LINE1:msie#00AAFF:'MSIE '",
-        "LINE1:bots#CCCCCC:'Bots '",
-        "LINE1:other#888888:'Other'"
+        "AREA:total#666666:Total",
+        "LINE1:gecko#FFAA00:Gecko",
+        "LINE1:opera#00AA00:Opera",
+        "LINE1:msie#00AAFF:MSIE ",
+        "LINE1:bots#CCCCCC:Bots ",
+        "LINE1:other#888888:Other"
         )
 
 def getMAL(series, units):
@@ -140,5 +140,8 @@ if __name__ == "__main__":
     a2r = ApacheToRRD("browsers.rrd")
     for arg in sys.argv[1:]:
         a2r.parse_log(arg)
-    a2r.output_browsers("graph.png", "week")
+    a2r.output_browsers("graph-day.png", "day")
+    a2r.output_browsers("graph-week.png", "week")
+    a2r.output_browsers("graph-month.png", "month")
+    a2r.output_browsers("graph-year.png", "year")
 
