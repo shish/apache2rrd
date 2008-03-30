@@ -104,6 +104,7 @@ class ApacheToRRD:
     def parse_date(self, date):
         (date, hour, minute, second) = date.split(":")
         if date != self.last_date_text:
+            print "New day: "+date[1:]
             self.last_date = int(time.mktime(time.strptime(date, "[%d/%b/%Y")))
             self.last_date_text = date
         return self.last_date + int(hour)*60*60 + int(minute)*60 + int(second)
@@ -177,13 +178,6 @@ class ApacheToRRD:
         "AREA:bandwidth#666666:Bandwidth"
         )
 
-def getMAL(series, units):
-    return \
-        "GPRINT:"+series+":AVERAGE:'%7.2lf"+units+"' "+\
-        "GPRINT:"+series+":MIN:'%7.2lf"+units+"' "+\
-        "GPRINT:"+series+":MAX:'%7.2lf"+units+"' "+\
-        "GPRINT:"+series+":LAST:'%7.2lf"+units+"\\n' "
-
 if __name__ == "__main__":
     a2r = ApacheToRRD("browsers.rrd")
     for arg in sys.argv[1:]:
@@ -192,5 +186,8 @@ if __name__ == "__main__":
     a2r.output_browsers("graph-week.png", "week")
     a2r.output_browsers("graph-month.png", "month")
     a2r.output_browsers("graph-year.png", "year")
+    a2r.output_bandwidth("graph-bw-day.png", "day")
     a2r.output_bandwidth("graph-bw-week.png", "week")
+    a2r.output_bandwidth("graph-bw-month.png", "month")
+    a2r.output_bandwidth("graph-bw-year.png", "year")
 
