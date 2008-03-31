@@ -190,7 +190,8 @@ def usage():
     print """
 Usage:
   a2r -r file.rrd [log file] [log file] [log file] [...]
-  a2r -r file.rrd -o bandwidth-week.png -t week
+  a2r -r file.rrd -b -t week -o bandwidth-week.png
+  a2r -r file.rrd -u -t year -o useragent-year.png
 
   -r rrd file to use
   -o output file name
