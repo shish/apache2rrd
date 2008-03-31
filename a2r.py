@@ -11,13 +11,13 @@ import getopt
 
 class ApacheToRRD:
     def __init__(self, rrd):
-        self.clear()
+        self.__clear()
         self.last_flush = None
         self.last_date = None
         self.last_date_text = None
         self.rrd = rrd
 
-    def init_rrd(self):
+    def __init_rrd(self):
         if not os.path.exists(self.rrd):
             rrdtool.create(self.rrd,
                     '--step', '300',
@@ -34,7 +34,7 @@ class ApacheToRRD:
                     'RRA:AVERAGE:0.5:288:2400'
                     )
 
-    def flush(self):
+    def __flush(self):
         #print "Update at "+str(seconds)
         rrdtool.update(self.rrd,
                 '-t', 'gecko:opera:msie:bots:other:bandwidth',
@@ -43,10 +43,10 @@ class ApacheToRRD:
                         self.gecko, self.opera, self.msie, self.bots, self.other,
                         self.bandwidth)
         )
-        self.clear()
+        self.__clear()
         self.last_flush = self.last_flush + 300
 
-    def clear(self):
+    def __clear(self):
         self.gecko = 0
         self.opera = 0
         self.msie = 0
@@ -67,7 +67,7 @@ class ApacheToRRD:
             line = fopen(filename).readline()
             (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
             self.last_flush = self.parse_date(date)
-            self.init_rrd()
+            self.__init_rrd()
 
         # do the bulk of the parsing
         n = 0
@@ -81,7 +81,7 @@ class ApacheToRRD:
                 current_timestamp = self.parse_date(date)
 
                 while current_timestamp >= self.last_flush + 300:
-                    self.flush()
+                    self.__flush()
 
                 if agent.find("Gecko") >= 0:
                     self.gecko = self.gecko + 1
@@ -101,7 +101,7 @@ class ApacheToRRD:
             except Exception, e:
                 print "Error with line:\n"+line+"\nError is:\n"+str(e)
 
-        self.flush()
+        self.__flush()
 
     def parse_date(self, date):
         """
