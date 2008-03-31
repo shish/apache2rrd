@@ -6,6 +6,8 @@ import time
 import os.path
 import sys
 import gzip
+import getopt
+
 
 class ApacheToRRD:
     def __init__(self, rrd):
@@ -60,7 +62,7 @@ class ApacheToRRD:
         else:
             fopen = open
 
-        # check the file looks ok
+        # check the file looks ok, and find the start time
         if not self.last_flush:
             line = fopen(filename).readline()
             (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
@@ -102,6 +104,11 @@ class ApacheToRRD:
         self.flush()
 
     def parse_date(self, date):
+        """
+        Turn an apache formatted date into a unix timestamp.
+
+        Caching the date here makes the script as a whole run 5x as fast
+        """
         (date, hour, minute, second) = date.split(":")
         if date != self.last_date_text:
             print "New day: "+date[1:]
@@ -109,7 +116,7 @@ class ApacheToRRD:
             self.last_date_text = date
         return self.last_date + int(hour)*60*60 + int(minute)*60 + int(second)
 
-    def length_to_t(self, length):
+    def __length_to_t(self, length):
         if length == "day":
             t = "-1d"
         if length == "week":
@@ -121,7 +128,7 @@ class ApacheToRRD:
         return t
 
     def output_browsers(self, filename, length="month"):
-        t = self.length_to_t(length)
+        t = self.__length_to_t(length)
 
         rrdtool.graph(filename,
                 '--start', t,
@@ -178,16 +185,73 @@ class ApacheToRRD:
         "AREA:bandwidth#666666:Bandwidth"
         )
 
-if __name__ == "__main__":
-    a2r = ApacheToRRD("browsers.rrd")
-    for arg in sys.argv[1:]:
+
+def usage():
+    print """
+Usage:
+  a2r -r file.rrd [log file] [log file] [log file] [...]
+  a2r -r file.rrd -o bandwidth-week.png -t week
+
+  -r rrd file to use
+  -o output file name
+  -b output a bandwidth graph
+  -u output a user-agent graph
+  -t timescale (day, week, month, year)
+  -h help
+    """
+
+
+def main():
+    rrdfile = None
+    output = None
+    output_mode = None
+    timescale = None
+
+    try:
+        optlist, args = getopt.getopt(sys.argv[1:], 'r:o:but:h')
+    except getopt.GetoptError, err:
+        print str(err)
+        usage()
+        return 2
+
+    for o, a in optlist:
+        if o == "-r":
+            rrdfile = a
+        elif o == "-o":
+            output = a
+        elif o == "-b":
+            output_mode = "bandwidth"
+        elif o == "-u":
+            output_mode = "browsers"
+        elif o == "-t":
+            timescale = a
+        elif o == "-h":
+            usage()
+            return 0
+
+    if not rrdfile:
+        print "RRD file must be specified"
+        return 1
+
+    if (output or output_mode or timescale) and (not output or not output_mode or not timescale):
+        print "Output, output mode, and timescale must all be specified together"
+        return 1
+
+    if timescale and timescale not in ["day", "week", "month", "year"]:
+        print "Timescale not recognised"
+        return 1
+
+    a2r = ApacheToRRD(rrdfile)
+
+    for arg in args:
         a2r.parse_log(arg)
-    a2r.output_browsers("graph-day.png", "day")
-    a2r.output_browsers("graph-week.png", "week")
-    a2r.output_browsers("graph-month.png", "month")
-    a2r.output_browsers("graph-year.png", "year")
-    a2r.output_bandwidth("graph-bw-day.png", "day")
-    a2r.output_bandwidth("graph-bw-week.png", "week")
-    a2r.output_bandwidth("graph-bw-month.png", "month")
-    a2r.output_bandwidth("graph-bw-year.png", "year")
+
+    if output:
+        if output_mode == "browsers":
+            a2r.output_browsers(output, timescale)
+        if output_mode == "bandwidth":
+            a2r.output_bandwidth(output, timescale)
+
+if __name__ == "__main__":
+    main()
 
