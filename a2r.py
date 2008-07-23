@@ -6,10 +6,16 @@ import time
 import os.path
 import sys
 import gzip
+import bz2
 import getopt
 
 
 class ApacheToRRD:
+    """
+    A class containing the functionality necessary to convert an
+    apache log file to an RRD database
+    """
+
     def __init__(self, rrd):
         self.__clear()
         self.last_flush = None
@@ -59,6 +65,8 @@ class ApacheToRRD:
 
         if filename[-3:] == ".gz":
             fopen = gzip.open
+        elif filename[-4:] == ".bz2":
+            fopen = bz2.BZ2File
         else:
             fopen = open
 
