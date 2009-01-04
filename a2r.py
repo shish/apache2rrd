@@ -30,6 +30,7 @@ class ApacheToRRD:
                     '--start', str(self.last_flush-1),
                     'DS:gecko:GAUGE:600:0:U',
                     'DS:opera:GAUGE:600:0:U',
+                    'DS:webkit:GAUGE:600:0:U',
                     'DS:msie:GAUGE:600:0:U',
                     'DS:bots:GAUGE:600:0:U',
                     'DS:other:GAUGE:600:0:U',
@@ -42,13 +43,17 @@ class ApacheToRRD:
 
     def __flush(self):
         #print "Update at "+str(seconds)
-        rrdtool.update(self.rrd,
-                '-t', 'gecko:opera:msie:bots:other:bandwidth',
+        try:
+            rrdtool.update(self.rrd,
+                '-t', 'gecko:opera:msie:webkit:bots:other:bandwidth',
                 '%d:%d:%d:%d:%d:%d:%d' % (
-                        self.last_flush,
-                        self.gecko, self.opera, self.msie, self.bots, self.other,
-                        self.bandwidth)
-        )
+                    self.last_flush,
+                    self.gecko, self.opera, self.msie,
+                    self.webkit, self.bots, self.other,
+                    self.bandwidth)
+            )
+        except:
+            pass
         self.__clear()
         self.last_flush = self.last_flush + 300
 
@@ -57,6 +62,7 @@ class ApacheToRRD:
         self.opera = 0
         self.msie = 0
         self.bots = 0
+        self.webkit = 0
         self.other = 0
         self.bandwidth = 0
 
@@ -91,10 +97,12 @@ class ApacheToRRD:
                 while current_timestamp >= self.last_flush + 300:
                     self.__flush()
 
-                if agent.find("Gecko") >= 0:
-                    self.gecko = self.gecko + 1
+                if agent.find("WebKit") >= 0:
+                    self.webkit = self.webkit + 1
                 elif agent.find("Opera") >= 0:
                     self.opera = self.opera + 1
+                elif agent.find("Gecko") >= 0:
+                    self.gecko = self.gecko + 1
                 elif agent.find("Bot") >= 0:
                     self.bots = self.bots + 1
                 elif agent.find("MSIE") >= 0:
@@ -133,6 +141,8 @@ class ApacheToRRD:
             t = "-1m"
         if length == "year":
             t = "-1y"
+        if length == "2year":
+            t = "-2y"
         return t
 
     def output_browsers(self, filename, length="month"):
@@ -155,11 +165,13 @@ class ApacheToRRD:
         "DEF:sgecko="+self.rrd+":gecko:AVERAGE", # values per second
         "DEF:sopera="+self.rrd+":opera:AVERAGE",
         "DEF:smsie="+self.rrd+":msie:AVERAGE",
+        "DEF:swebkit="+self.rrd+":webkit:AVERAGE",
         "DEF:sbots="+self.rrd+":bots:AVERAGE",
         "DEF:sother="+self.rrd+":other:AVERAGE",
         "CDEF:gecko=sgecko,5,/", # values per minute
         "CDEF:opera=sopera,5,/",
         "CDEF:msie=smsie,5,/",
+        "CDEF:webkit=swebkit,5,/",
         "CDEF:bots=sbots,5,/",
         "CDEF:other=sother,5,/",
         "CDEF:total=gecko,opera,+,msie,+",
@@ -167,6 +179,7 @@ class ApacheToRRD:
         "LINE1:gecko#FFAA00:Gecko",
         "LINE1:opera#00AA00:Opera",
         "LINE1:msie#00AAFF:MSIE ",
+        "LINE1:webkit#FFAAFF:WebKit ",
         "LINE1:bots#CCCCCC:Bots ",
         "LINE1:other#888888:Other"
         )
@@ -246,7 +259,7 @@ def main():
         print "Output, output mode, and timescale must all be specified together"
         return 1
 
-    if timescale and timescale not in ["day", "week", "month", "year"]:
+    if timescale and timescale not in ["day", "week", "month", "year", "2year"]:
         print "Timescale not recognised"
         return 1
 
