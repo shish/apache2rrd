@@ -46,7 +46,7 @@ class ApacheToRRD:
         try:
             rrdtool.update(self.rrd,
                 '-t', 'gecko:opera:msie:webkit:bots:other:bandwidth',
-                '%d:%d:%d:%d:%d:%d:%d' % (
+                '%d:%d:%d:%d:%d:%d:%d:%d' % (
                     self.last_flush,
                     self.gecko, self.opera, self.msie,
                     self.webkit, self.bots, self.other,
