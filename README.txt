@@ -18,5 +18,7 @@ Usage:
   -b output a bandwidth graph
   -u output a user-agent graph
   -t timescale (day, week, month, year)
+  -x width
+  -y height
   -h help
 

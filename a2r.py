@@ -148,12 +148,12 @@ class ApacheToRRD:
             t = "-2y"
         return t
 
-    def output_browsers(self, filename, length="month"):
+    def output_browsers(self, filename, length="month", width=500, height=150):
         t = self.__length_to_t(length)
 
         rrdtool.graph(filename,
                 '--start', t,
-                '--width', "500", '--height', "150",
+                '--width', str(width), '--height', str(height),
                 '--imgformat', 'PNG',
                 '--no-minor',
                 '--units-length', "7",
@@ -187,12 +187,12 @@ class ApacheToRRD:
         "LINE1:other#888888:Other"
         )
 
-    def output_bandwidth(self, filename, length="month"):
+    def output_bandwidth(self, filename, length="month", width=500, height=150):
         t = self.length_to_t(length)
 
         rrdtool.graph(filename,
                 '--start', t,
-                '--width', "500", '--height', "150",
+                '--width', str(width), '--height', str(height),
                 '--imgformat', 'PNG',
                 '--no-minor',
                 '--units-length', "7",
@@ -229,6 +229,8 @@ Usage:
   -b output a bandwidth graph
   -u output a user-agent graph
   -t timescale (day, week, month, year)
+  -x width
+  -y height
   -h help
     """
 
@@ -238,9 +240,11 @@ def main():
     output = None
     output_mode = None
     timescale = None
+    height = 150
+    width = 500
 
     try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'r:o:but:h')
+        optlist, args = getopt.getopt(sys.argv[1:], 'r:o:but:hx:y:')
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -257,6 +261,10 @@ def main():
             output_mode = "browsers"
         elif o == "-t":
             timescale = a
+        elif o == "-x":
+            width = int(a)
+        elif o == "-y":
+            height = int(a)
         elif o == "-h":
             usage()
             return 0
@@ -280,9 +288,9 @@ def main():
 
     if output:
         if output_mode == "browsers":
-            a2r.output_browsers(output, timescale)
+            a2r.output_browsers(output, timescale, width, height)
         if output_mode == "bandwidth":
-            a2r.output_bandwidth(output, timescale)
+            a2r.output_bandwidth(output, timescale, width, height)
 
 if __name__ == "__main__":
     main()
