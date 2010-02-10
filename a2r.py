@@ -136,6 +136,7 @@ class ApacheToRRD:
         return self.last_date + int(hour)*60*60 + int(minute)*60 + int(second)
 
     def __length_to_t(self, length):
+        t = None
         if length == "day":
             t = "-1d"
         if length == "week":
@@ -152,6 +153,8 @@ class ApacheToRRD:
             t = "-4y"
         if length == "5year":
             t = "-5y"
+        if not t:
+            t = length
         return t
 
     def output_browsers(self, filename, length="month", width=500, height=150):
@@ -281,10 +284,6 @@ def main():
 
     if (output or output_mode or timescale) and (not output or not output_mode or not timescale):
         print "Output, output mode, and timescale must all be specified together"
-        return 1
-
-    if timescale and timescale not in ["day", "week", "month", "year", "2year", "3year", "4year", "5year"]:
-        print "Timescale not recognised"
         return 1
 
     a2r = ApacheToRRD(rrdfile)
