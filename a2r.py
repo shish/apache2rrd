@@ -8,6 +8,7 @@ import sys
 import gzip
 import bz2
 import getopt
+import sys
 
 
 class ApacheToRRD:
@@ -73,6 +74,8 @@ class ApacheToRRD:
             fopen = gzip.open
         elif filename[-4:] == ".bz2":
             fopen = bz2.BZ2File
+        elif filename == "-":
+            fopen = get_stdin
         else:
             fopen = open
 
@@ -205,6 +208,11 @@ class ApacheToRRD:
         "CDEF:bandwidth=sbandwidth,300,/", # values per second
         "AREA:bandwidth#666666:Bandwidth"
         )
+
+
+def get_stdin(filename):
+    # same API as open(filename)
+    return sys.stdin
 
 
 def usage():
