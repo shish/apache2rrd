@@ -283,7 +283,7 @@ def main():
         print "Output, output mode, and timescale must all be specified together"
         return 1
 
-    if timescale and timescale not in ["day", "week", "month", "year", "2year"]:
+    if timescale and timescale not in ["day", "week", "month", "year", "2year", "3year", "4year", "5year"]:
         print "Timescale not recognised"
         return 1
 
