@@ -146,6 +146,12 @@ class ApacheToRRD:
             t = "-1y"
         if length == "2year":
             t = "-2y"
+        if length == "3year":
+            t = "-3y"
+        if length == "4year":
+            t = "-4y"
+        if length == "5year":
+            t = "-5y"
         return t
 
     def output_browsers(self, filename, length="month", width=500, height=150):
