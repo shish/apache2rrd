@@ -215,6 +215,8 @@ Usage:
   a2r -r file.rrd -u -t year -o useragent-year.png
 
   -r rrd file to use
+     .gz and .bz2 are handled automatically
+     for exteral commands, pipe and use "-" for stdin
   -o output file name
   -b output a bandwidth graph
   -u output a user-agent graph
