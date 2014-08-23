@@ -202,7 +202,7 @@ class ApacheToRRD:
         )
 
     def output_bandwidth(self, filename, length="month", width=500, height=150):
-        t = self.length_to_t(length)
+        t = self.__length_to_t(length)
 
         rrdtool.graph(filename,
                 '--start', t,
