@@ -82,7 +82,10 @@ class ApacheToRRD:
         # check the file looks ok, and find the start time
         if not self.last_flush:
             line = fopen(filename).readline()
-            (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
+            try:
+                (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
+            except ValueError as e:
+                raise Exception("Error reading first line: %s\n(line = %r)" % (e, line))
             self.last_flush = self.parse_date(date)
             self.__init_rrd()
 
@@ -94,7 +97,10 @@ class ApacheToRRD:
                 if n % 10000 == 0:
                     print "Line "+str(n)+"\r",
                     sys.stdout.flush()
-                (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
+                try:
+                    (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
+                except ValueError as e:
+                    raise Exception("Error reading log line: %s\n(line = %r)" % (e, line))
                 current_timestamp = self.parse_date(date)
 
                 while current_timestamp >= self.last_flush + 300:
