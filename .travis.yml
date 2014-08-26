@@ -1,0 +1,8 @@
+language: python
+python:
+  - "2.7"
+install:
+  - "sudo apt-get install python-rrdtool"
+script:
+  - python -m compileall -f .
+  - nosetests --with-cover --cover-package=a2r
