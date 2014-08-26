@@ -1,9 +1,9 @@
 language: python
 python:
-  - "2.7"
+	- "2.7"
 install:
-  - "sudo apt-get install python-rrdtool"  # install dev headers
-  - "pip install python-rrdtool coverage"  # install python lib in venv
+	- "sudo apt-get install python-rrdtool librrd4 librrd-dev"  # install dev headers
+	- "pip install python-rrdtool coverage"  # install python lib in venv
 script:
-  - python -m compileall -f .
-  - nosetests --with-cover --cover-package=a2r
+	- python -m compileall -f .
+	- nosetests --with-cover --cover-package=a2r
