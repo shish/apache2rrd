@@ -22,3 +22,5 @@ Usage:
   -y height
   -h help
 
+Notes:
+  log file should be in "combined" format.

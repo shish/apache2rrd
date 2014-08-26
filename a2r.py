@@ -9,7 +9,7 @@ import gzip
 import bz2
 import getopt
 import sys
-
+import re
 
 class ApacheToRRD:
     """
@@ -79,15 +79,8 @@ class ApacheToRRD:
         else:
             fopen = open
 
-        # check the file looks ok, and find the start time
-        if not self.last_flush:
-            line = fopen(filename).readline()
-            try:
-                (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
-            except ValueError as e:
-                raise Exception("Error reading first line: %s\n(line = %r)" % (e, line))
-            self.last_flush = self.parse_date(date)
-            self.__init_rrd()
+        # This regex will be used to parse the log file.
+        regex = re.compile('^([^ ]+) ([^ ]+) ([^ ]+) \[([^ ]+) ([^\]]+)\] (?:"([^ "]+) (.+)? (HTTP[^ ]+?)"|"[^"]+") ([^ ]+) ([^ ]+) "(.+?)" "(.+?)"', re.M)
 
         # do the bulk of the parsing
         n = 0
@@ -97,10 +90,16 @@ class ApacheToRRD:
                 if n % 10000 == 0:
                     print "Line "+str(n)+"\r",
                     sys.stdout.flush()
-                try:
-                    (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = line.split(" ", 11)
-                except ValueError as e:
-                    raise Exception("Error reading log line: %s\n(line = %r)" % (e, line))
+                m = regex.match(line)
+                if not m:
+                    print("Error reading log line: %s\n(line = %r)" % (n, line))
+                    continue
+                (ip, host, user, date, offset, method, url, http, status, size, referrer, agent) = (m.group(1), m.group(2), m.group(3), m.group(4), m.group(5), m.group(6), m.group(7), m.group(8), m.group(9), m.group(10), m.group(11), m.group(12))
+                # Make note of the start time.
+		if not self.last_flush:
+                    self.last_flush = self.parse_date(date)
+                    self.__init_rrd()
+
                 current_timestamp = self.parse_date(date)
 
                 while current_timestamp >= self.last_flush + 300:
@@ -124,7 +123,7 @@ class ApacheToRRD:
             except KeyboardInterrupt, ke:
                 raise ke
             except Exception, e:
-                print "Error with line:\n"+line+"\nError is:\n"+str(e)
+                print "Error with line " + str(n) + ":" +  line + "\nError is:\n"+str(e)
 
         self.__flush()
 
@@ -137,7 +136,7 @@ class ApacheToRRD:
         (date, hour, minute, second) = date.split(":")
         if date != self.last_date_text:
             print "New day: "+date[1:]
-            self.last_date = int(time.mktime(time.strptime(date, "[%d/%b/%Y")))
+            self.last_date = int(time.mktime(time.strptime(date, "%d/%b/%Y")))
             self.last_date_text = date
         return self.last_date + int(hour)*60*60 + int(minute)*60 + int(second)
 
@@ -305,4 +304,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
 
