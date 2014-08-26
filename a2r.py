@@ -11,6 +11,7 @@ import getopt
 import sys
 import re
 
+
 class ApacheToRRD:
     """
     A class containing the functionality necessary to convert an
@@ -304,7 +305,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
